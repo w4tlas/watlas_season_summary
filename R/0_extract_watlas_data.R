@@ -38,7 +38,7 @@ all_tags[, .N, species]
 all_tags[season == season_id, .N, species]
 
 # subset desired tags using data.table
-tags <- all_tags[season == season_id]$tag
+tags <- all_tags[season == season_id & !is.na(species)]$tag
 
 # check N
 tags |> length()
