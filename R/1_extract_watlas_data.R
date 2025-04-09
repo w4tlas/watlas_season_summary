@@ -8,22 +8,32 @@
 # It extracts all data from one season and saves then separately for each tag
 # as csv.
 
+# Summary
+# 1. Load WATLAS data
+# 2. Save split by tag
+
 # packages
 library(tools4watlas)
 library(foreach)
 
 # specify season and file path's
-season_id <- 2023
-season2_id <- 2024 # set to NULL if not existing yet
+season_id <- 2022
+season2_id <- 2023 # set to NULL if not existing yet
 
 # file path to WATLAS teams data folder
 watlas_fp <- atl_file_path("watlas_teams")
 
 # file path to sqlite databases
-db_fp <- "C:/Users/jkrietsch/OneDrive - NIOZ/Documents/watlas_data/localizations/"
+db_fp <- paste0(
+  "C:/Users/jkrietsch/OneDrive - NIOZ/",
+  "Documents/watlas_data/localizations/"
+)
+
+# check run time
+st <- Sys.time()
 
 #-------------------------------------------------------------------------------
-# Load WATLAS data
+# 1. Load WATLAS data
 #-------------------------------------------------------------------------------
 
 # load Excel file with metadata
@@ -103,7 +113,7 @@ setcolorder(data, c("species", setdiff(names(data), c("species"))))
 setorder(data, species, tag, time)
 
 #-------------------------------------------------------------------------------
-# Save split by tag
+# 2. Save split by tag
 #-------------------------------------------------------------------------------
 
 # unique ID (here by tag)
@@ -119,10 +129,13 @@ foreach(i = id) %do% {
   fwrite(
     data_subset,
     paste0(
-      "./data/", season_id, "/split_raw/watlas_", season_id,
+      "./data/", season_id, "/watlas_", season_id,
       "_raw_tag_", i, ".csv"
     ),
     yaml = TRUE
   )
 
 }
+
+# total run time
+round(Sys.time() - st, 2)

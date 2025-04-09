@@ -10,6 +10,7 @@
 # 2. Overview of all data by species
 # 3. Check all data with map by ID
 # 4. Check all data with map by ID for last n positions
+# 5. Check all data with map by ID for last 100 positions
 
 # packages
 library(tools4watlas)
@@ -20,11 +21,14 @@ library(foreach)
 library(doFuture)
 
 # specify season and file path's
-season_id <- 2023
+season_id <- 2024
 
+# file path to split raw data
+path_raw <- paste0("./data/", season_id, "/")
+               
 # list all files
 file_list <- list.files(
-  path = paste0("./data/", season_id, "/split_raw/"), full.names = TRUE
+  path = path_raw, full.names = TRUE
 )
 
 # read and combine all CSV files into one data table
@@ -41,7 +45,10 @@ data_summary <- atl_summary(data, id_columns = c("species", "tag"))
 setorder(data_summary, species, tag)
 
 # save summary
-# fwrite(data_summary, "./data/metadata/all_shorebirds_morphometrics.csv", yaml = TRUE)
+fwrite(
+  data_summary,
+  paste0("./outputs/season_overview/data_summary_all_", season_id, ".csv")
+)
 
 # N individuals with tagging data
 data_summary |> nrow()
@@ -205,29 +212,11 @@ foreach(i = id) %do% {
 # 3. Check all data with map by ID
 #-------------------------------------------------------------------------------
 
-# Load extracted raw data
-data <- fread("./data/localizations/watlas_2023_raw.csv", yaml = TRUE)
-
-# file path
-path <- "./outputs/checks/maps_by_tag_raw/"
+# file path output
+path <- paste0("./outputs/maps_by_tag_raw/", season_id, "/")
 
 # unique ID (here by tag)
 id <- unique(data$tag)
-
-# split data (only necessary if dataset is to big to send to all cores)
-foreach(i = id) %do% {
-
-  # subset data
-  data_subset <- data[tag == i]
-
-  # save data
-  fwrite(
-    data_subset,
-    paste0("./data/localizations/split_raw/watlas_2023_raw_", i, ".csv"),
-    yaml = TRUE
-  )
-
-}
 
 # register cores and backend for parallel processing
 registerDoFuture()
@@ -238,7 +227,7 @@ foreach(i = id) %dofuture% {
 
   # subset data
   data_subset <- fread(
-    paste0("./data/localizations/split_raw/watlas_2023_raw_", i, ".csv"),
+    paste0(path_raw, "watlas_", season_id, "_raw_tag_", i, ".csv"),
     yaml = TRUE
   )
 
@@ -256,27 +245,28 @@ foreach(i = id) %dofuture% {
 plan(sequential)
 
 #-------------------------------------------------------------------------------
-# 4. Check all data with map by ID for last n positions
+# 4. Check all data with map by ID for last 1000 positions
 #-------------------------------------------------------------------------------
 
-# Load extracted raw data
-data <- fread("./data/localizations/watlas_2023_raw.csv", yaml = TRUE)
-
-# file path
-path <- "./outputs/checks/maps_by_tag_raw_last1000/"
+# file path output
+path <- paste0("./outputs/maps_by_tag_raw_last1000/", season_id, "/")
 
 # unique ID (here by tag)
 id <- unique(data$tag)
 
+# register cores and backend for parallel processing
+registerDoFuture()
+plan(multisession)
+
 # loop to make plots for all
 foreach(i = id) %dofuture% {
-
+  
   # subset data
   data_subset <- fread(
-    paste0("./data/localizations/split_raw/watlas_2023_raw_", i, ".csv"),
+    paste0(path_raw, "watlas_", season_id, "_raw_tag_", i, ".csv"),
     yaml = TRUE
   )
-
+  
   # plot and save data
   atl_check_tag(
     data_subset,
@@ -284,7 +274,43 @@ foreach(i = id) %dofuture% {
     highlight_first = TRUE, highlight_last = TRUE, last_n = 1000,
     filename = paste0(path, data_subset[1]$species, "_tag_", i)
   )
+  
+}
 
+# close parallel workers
+plan(sequential)
+
+#-------------------------------------------------------------------------------
+# 5. Check all data with map by ID for last 100 positions
+#-------------------------------------------------------------------------------
+
+# file path output
+path <- paste0("./outputs/maps_by_tag_raw_last100/", season_id, "/")
+
+# unique ID (here by tag)
+id <- unique(data$tag)
+
+# register cores and backend for parallel processing
+registerDoFuture()
+plan(multisession)
+
+# loop to make plots for all
+foreach(i = id) %dofuture% {
+  
+  # subset data
+  data_subset <- fread(
+    paste0(path_raw, "watlas_", season_id, "_raw_tag_", i, ".csv"),
+    yaml = TRUE
+  )
+  
+  # plot and save data
+  atl_check_tag(
+    data_subset,
+    option = "datetime",
+    highlight_first = TRUE, highlight_last = TRUE, last_n = 100,
+    filename = paste0(path, data_subset[1]$species, "_tag_", i)
+  )
+  
 }
 
 # close parallel workers
