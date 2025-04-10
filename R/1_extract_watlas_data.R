@@ -17,8 +17,8 @@ library(tools4watlas)
 library(foreach)
 
 # specify season and file path's
-season_id <- 2022
-season2_id <- 2023 # set to NULL if not existing yet
+season_id <- 2023
+season2_id <- season_id + 1 # set to NULL if not existing yet
 
 # file path to WATLAS teams data folder
 watlas_fp <- atl_file_path("watlas_teams")
@@ -103,7 +103,7 @@ if (!is.null(season2_id)) {
 }
 
 # join with species data
-all_tags[, tag := as.character(tag)]
+all_tags[, tag := sprintf("%04d", as.integer(tag))]
 data[all_tags, on = "tag", `:=`(species = i.species)]
 
 # make species first column

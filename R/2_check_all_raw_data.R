@@ -21,11 +21,11 @@ library(foreach)
 library(doFuture)
 
 # specify season and file path's
-season_id <- 2024
+season_id <- 2021
 
 # file path to split raw data
 path_raw <- paste0("./data/", season_id, "/")
-               
+
 # list all files
 file_list <- list.files(
   path = path_raw, full.names = TRUE
@@ -89,7 +89,10 @@ ggsave(
 
 # plot overview of the data
 # create basemap
-bm <- atl_create_bm(data, buffer = 800)
+bm <- atl_create_bm(
+  data, buffer = 800,
+  water_fill = "dodgerblue4", land_fill = "grey20", mudflat_colour = NA
+)
 
 # round data to 1 ha (100x100 meter) grid cells
 data[, c("x_round", "y_round") := list(
@@ -129,13 +132,13 @@ id <- unique(data$species)
 
 # loop to make plots by day by species
 foreach(i = id) %do% {
-  
+
   # subset data
   data_subset <- data[species == i]
-  
+
   # N positions by species and day
   data_subset <- data_subset[, .N, by = .(species, tag, date)]
-  
+
   # plot data
   ggplot(data_subset, aes(x = date, y = tag, fill = N)) +
     geom_tile() +
@@ -153,7 +156,7 @@ foreach(i = id) %do% {
       strip.text.y.left = element_text(angle = 0),
       strip.placement = "outside"
     )
-  
+
   # save
   ggsave(
     paste0(
@@ -162,27 +165,30 @@ foreach(i = id) %do% {
     ),
     plot = last_plot(), width = 3240, height = 2160, units = c("px"), dpi = 300
   )
-  
+
 }
 
 # loop to make maps by species
 foreach(i = id) %do% {
-  
+
   # subset data
   data_subset <- data[species == i]
-  
+
   # create basemap
-  bm <- atl_create_bm(data_subset, buffer = 800)
-  
+  bm <- atl_create_bm(
+    data, buffer = 800,
+    water_fill = "dodgerblue4", land_fill = "grey20", mudflat_colour = NA
+  )
+
   # round data to 1 ha (100x100 meter) grid cells
   data_subset[, c("x_round", "y_round") := list(
     plyr::round_any(x, 100),
     plyr::round_any(y, 100)
   )]
-  
+
   # N by location
   data_subset2 <- data_subset[, .N, by = c("x_round", "y_round")]
-  
+
   # plot heatmap
   bm +
     geom_tile(
@@ -196,7 +202,7 @@ foreach(i = id) %do% {
       direction = -1
     ) +
     ggtitle(label = season_id)
-  
+
   # save
   ggsave(
     paste0(
@@ -205,7 +211,7 @@ foreach(i = id) %do% {
     ),
     plot = last_plot(), width = 3240, height = 2160, units = c("px"), dpi = 300
   )
-  
+
 }
 
 #-------------------------------------------------------------------------------
@@ -260,13 +266,13 @@ plan(multisession)
 
 # loop to make plots for all
 foreach(i = id) %dofuture% {
-  
+
   # subset data
   data_subset <- fread(
     paste0(path_raw, "watlas_", season_id, "_raw_tag_", i, ".csv"),
     yaml = TRUE
   )
-  
+
   # plot and save data
   atl_check_tag(
     data_subset,
@@ -274,7 +280,7 @@ foreach(i = id) %dofuture% {
     highlight_first = TRUE, highlight_last = TRUE, last_n = 1000,
     filename = paste0(path, data_subset[1]$species, "_tag_", i)
   )
-  
+
 }
 
 # close parallel workers
@@ -296,13 +302,13 @@ plan(multisession)
 
 # loop to make plots for all
 foreach(i = id) %dofuture% {
-  
+
   # subset data
   data_subset <- fread(
     paste0(path_raw, "watlas_", season_id, "_raw_tag_", i, ".csv"),
     yaml = TRUE
   )
-  
+
   # plot and save data
   atl_check_tag(
     data_subset,
@@ -310,7 +316,7 @@ foreach(i = id) %dofuture% {
     highlight_first = TRUE, highlight_last = TRUE, last_n = 100,
     filename = paste0(path, data_subset[1]$species, "_tag_", i)
   )
-  
+
 }
 
 # close parallel workers
